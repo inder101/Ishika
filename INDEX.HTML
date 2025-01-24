@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f7fc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+
+        .login-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+
+        .login-container h2 {
+            margin-bottom: 20px;
+        }
+
+        .login-container input, .login-container button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .login-container button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        .login-container button:hover {
+            background-color: #45a049;
+        }
+
+        .task-list {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .task-list div {
+            background-color: #e9eff5;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .task-priority {
+            padding: 5px 10px;
+            font-size: 14px;
+            border-radius: 5px;
+        }
+
+        .priority-low {
+            background-color: #81c784;
+            color: white;
+        }
+
+        .priority-medium {
+            background-color: #ffeb3b;
+            color: black;
+        }
+
+        .priority-high {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .task-deadline {
+            font-size: 14px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Home Page -->
+    <div id="home-page" class="login-container">
+        <h2>Welcome to Task Management</h2>
+        <button onclick="navigateToLogin('boss')">Login as Boss</button>
+        <button onclick="navigateToLogin('employee')">Login as Employee</button>
+    </div>
+
+    <!-- Boss Login Page -->
+    <div id="login-boss" class="login-container" style="display: none;">
+        <h2>Login as Boss</h2>
+        <input type="text" id="boss-id" placeholder="Enter Boss ID">
+        <button onclick="handleLogin('boss')">Login</button>
+    </div>
+
+    <!-- Employee Login Page -->
+    <div id="login-employee" class="login-container" style="display: none;">
+        <h2>Login as Employee</h2>
+        <input type="text" id="employee-id" placeholder="Enter Employee ID">
+        <button onclick="handleLogin('employee')">Login</button>
+    </div>
+
+    <!-- Boss Dashboard -->
+    <div id="boss-dashboard" class="login-container" style="display: none;">
+        <h2>Boss Dashboard</h2>
+        <h3>Create Employee ID</h3>
+        <input type="text" id="new-employee-id" placeholder="New Employee ID">
+        <button onclick="createEmployee()">Create Employee</button>
+        
+        <h3>Assign Task</h3>
+        <input type="text" id="task-desc" placeholder="Task Description">
+        <select id="task-priority">
+            <option value="low">Low Priority</option>
+            <option value="medium">Medium Priority</option>
+            <option value="high">High Priority</option>
+        </select>
+        <input type="date" id="task-deadline">
+        <input type="text" id="assign-to-id" placeholder="Assign to Employee ID">
+        <button onclick="assignTask()">Assign Task</button>
+
+        <h3>Assigned Tasks</h3>
+        <div id="assigned-tasks">
+            <!-- Assigned tasks will appear here -->
+        </div>
+    </div>
+
+    <!-- Employee Dashboard -->
+    <div id="employee-dashboard" class="login-container" style="display: none;">
+        <h2>Employee Dashboard</h2>
+        <div id="task-list" class="task-list">
+            <!-- Assigned tasks will appear here -->
+        </div>
+    </div>
+
+    <script>
+        // Retrieve data from localStorage (if any)
+        const userDatabase = JSON.parse(localStorage.getItem('userDatabase')) || {}; // Stores all users (boss and employees)
+        const taskDatabase = JSON.parse(localStorage.getItem('taskDatabase')) || {}; // Stores all tasks by employee ID
+        const bossID = 'boss123'; // Boss's predefined ID for login
+
+        // Navigate to Login Page based on the role (Boss or Employee)
+        function navigateToLogin(role) {
+            document.getElementById('home-page').style.display = 'none';
+            if (role === 'boss') {
+                document.getElementById('login-boss').style.display = 'block';
+            } else if (role === 'employee') {
+                document.getElementById('login-employee').style.display = 'block';
+            }
+        }
+
+        // Handle login for Boss or Employee
+        function handleLogin(role) {
+            if (role === 'boss') {
+                const bossIDInput = document.getElementById('boss-id').value;
+                if (bossIDInput === bossID) {
+                    alert("Boss logged in successfully!");
+                    showBossDashboard();
+                } else {
+                    alert("Invalid Boss ID");
+                }
+            } else if (role === 'employee') {
+                const employeeID = document.getElementById('employee-id').value;
+                if (employeeID && !userDatabase[employeeID]) {
+                    alert("Invalid Employee ID");
+                } else {
+                    alert("Employee logged in successfully!");
+                    showEmployeeDashboard(employeeID);
+                }
+            }
+        }
+
+        // Show the Boss Dashboard
+        function showBossDashboard() {
+            document.getElementById('login-boss').style.display = 'none';
+            document.getElementById('boss-dashboard').style.display = 'block';
+            displayAssignedTasks(); // Display all tasks assigned by the Boss
+        }
+
+        // Show the Employee Dashboard
+        function showEmployeeDashboard(employeeID) {
+            document.getElementById('login-employee').style.display = 'none';
+            document.getElementById('employee-dashboard').style.display = 'block';
+            displayEmployeeTasks(employeeID);
+        }
+
+        // Create Employee ID (for Boss)
+        function createEmployee() {
+            const newEmployeeID = document.getElementById('new-employee-id').value;
+            if (newEmployeeID && !userDatabase[newEmployeeID]) {
+                userDatabase[newEmployeeID] = { id: newEmployeeID };
+                localStorage.setItem('userDatabase', JSON.stringify(userDatabase)); // Save updated user data
+                alert('Employee ID created successfully!');
+            } else {
+                alert('Invalid or duplicate employee ID!');
+            }
+        }
+
+        // Assign Task (for Boss)
+        function assignTask() {
+            const taskDesc = document.getElementById('task-desc').value;
+            const taskPriority = document.getElementById('task-priority').value;
+            const taskDeadline = document.getElementById('task-deadline').value;
+            const assignToID = document.getElementById('assign-to-id').value;
+
+            if (userDatabase[assignToID]) {
+                const newTask = {
+                    description: taskDesc,
+                    status: 'Not Done',
+                    priority: taskPriority,
+                    deadline: taskDeadline
+                };
+                
+                taskDatabase[assignToID] = taskDatabase[assignToID] || [];
+                taskDatabase[assignToID].push(newTask);
+                localStorage.setItem('taskDatabase', JSON.stringify(taskDatabase)); // Save updated task data
+                alert('Task assigned successfully!');
+                displayAssignedTasks(); // Refresh the list of tasks assigned by the Boss
+            } else {
+                alert('Invalid employee ID!');
+            }
+        }
+
+        // Display Assigned Tasks (for Boss)
+        function displayAssignedTasks() {
+            const assignedTasksContainer = document.getElementById('assigned-tasks');
+            assignedTasksContainer.innerHTML = '';
+            
+            Object.keys(taskDatabase).forEach(employeeID => {
+                taskDatabase[employeeID].forEach(task => {
+                    const taskElement = document.createElement('div');
+                    taskElement.innerHTML = `
+                        <div>
+                            <strong>Employee ID:</strong> ${employeeID}<br>
+                            <span>${task.description} - ${task.status}</span>
+                            <span class="task-priority ${getPriorityClass(task.priority)}">${task.priority}</span>
+                            <span class="task-deadline">Deadline: ${task.deadline}</span>
+                        </div>
+                    `;
+                    assignedTasksContainer.appendChild(taskElement);
+                });
+            });
+        }
+
+        // Display Employee Tasks
+        function displayEmployeeTasks(employeeID) {
+            const taskList = taskDatabase[employeeID] || [];
+            const taskContainer = document.getElementById('task-list');
+            taskContainer.innerHTML = '';
+
+            taskList.forEach((task, index) => {
+                const taskElement = document.createElement('div');
+                taskElement.innerHTML = `
+                    <div>
+                        <span>${task.description} - ${task.status}</span>
+                        <span class="task-priority ${getPriorityClass(task.priority)}">${task.priority}</span>
+                        <span class="task-deadline">Deadline: ${task.deadline}</span>
+                        ${task.status === 'Not Done' ? `<button onclick="markTaskAsDone('${employeeID}', ${index})">Mark as Done</button>` : ''}
+                    </div>
+                `;
+                taskContainer.appendChild(taskElement);
+            });
+        }
+
+        // Mark task as done (for Employee)
+        function markTaskAsDone(employeeID, taskIndex) {
+            taskDatabase[employeeID][taskIndex].status = 'Completed';
+            localStorage.setItem('taskDatabase', JSON.stringify(taskDatabase)); // Save updated task data
+            displayEmployeeTasks(employeeID); // Refresh the task list for Employee
+            displayAssignedTasks(); // Refresh the task list for Boss
+        }
+
+        // Get the priority class for styling
+        function getPriorityClass(priority) {
+            if (priority === 'low') return 'priority-low';
+            if (priority === 'medium') return 'priority-medium';
+            return 'priority-high';
+        }
+    </script>
+    firebase deploy
+</body>
+</html>
